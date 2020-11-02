@@ -1,7 +1,7 @@
 # DirectFund
-A decentralized app raising funds via donations and blind auctions.
-<br><br>
 
+### A decentralized app for raising funds via donations and blind auctions.
+<br>
 <ul>
 <li style="text-align:justify">We often come across fund raisers on Facebook and other social media
 platforms where people donate money to raise funds for a particular person
