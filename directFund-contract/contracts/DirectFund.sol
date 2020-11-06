@@ -24,31 +24,40 @@ contract DirectFund {
     mapping(address => Propose) allProposals;
     mapping(address => uint) returnAmount;
 
+
+    // Events
+    event SaleEnded(address finalBuyer, uint finalCost);
+    event ProposalPhaseStarted();
+    event BuyPhaseStarted();
+    event SaleInit();
+    event ZeroBalance();
+    
     // modifier to check if recipient
     modifier onlyRecipient(){
-        require (msg.sender == recipient);
+        require (msg.sender == recipient, "Only the recipient can perform this action");
         _;
     }
     
     // modifier to check if phase is valid
     modifier checkPhase(Phase ph){
-        require (ph == state);
+        require (ph == state, "Invalid phase for the action");
         _;
     }
     
     // modifier to check if the user is not the recipient
     modifier notRecipient(){
-        require (msg.sender != recipient);
+        require (msg.sender != recipient, "Only buyers must perform this action");
         _;
     }
     
     constructor() public {
         recipient = msg.sender;
-        state = Phase.Proposal;
+        emit SaleInit();
     }
     
     // function to make a donation
     function donate(uint donationAmt) public payable notRecipient{
+        donationAmt = donationAmt*1000000000000000000; // making all transactions in ether
         uint donationBalance = 0;
         recipient.transfer(donationAmt);
         donationBalance = msg.value - donationAmt;
@@ -56,14 +65,21 @@ contract DirectFund {
     }
     
     // function to change the phase
-    function changePhase(Phase nextPhase) public onlyRecipient{
-        if (uint(nextPhase) < 1) revert();
-        state = nextPhase;
+    function nextPhase() public onlyRecipient{
+        if (state == Phase.Done){
+            state = Phase.Init;
+        }else{
+            state = Phase(uint(state)+1);
+        }
+        
+        if (state == Phase.Init) emit SaleInit();
+        if (state == Phase.Proposal) emit ProposalPhaseStarted();
+        if (state == Phase.Sale) emit BuyPhaseStarted();
     }
     
     // function to send proposal to the recipient (who is the seller here)
-    function propose(bytes32 encodedAmount) public payable checkPhase(Phase.Proposal){
-        
+    function propose(bytes32 encodedAmount) public payable checkPhase(Phase.Proposal) notRecipient{
+        require(msg.value > 0,"Deposit amount must be greater than proposal amount");
         allProposals[msg.sender] = Propose({
             proposal: encodedAmount,
             amount: msg.value
@@ -71,11 +87,12 @@ contract DirectFund {
     }
     
     // funtion to finalise the sale.
-    function buy(uint proposedRate, bytes32 secret) public checkPhase(Phase.Sale){
+    function buy(uint proposedRate, bytes32 secret) public checkPhase(Phase.Sale) notRecipient{
         uint saleBalance = 0;
         Propose storage checkProp = allProposals[msg.sender];
         // check if the proposal is right one
         if (checkProp.proposal == computeKeccak(proposedRate,secret)){
+            proposedRate = proposedRate*1000000000000000000; // making all transactions in ether
             saleBalance += checkProp.amount;  // has the proposed value as well as msg.value 
             if ((checkProp.amount >= proposedRate) && (checkMaxSale(msg.sender, proposedRate)))
                 saleBalance -= proposedRate;
@@ -101,18 +118,23 @@ contract DirectFund {
     // return the amount to the buyers who didn't get the item
     function getReturns() public checkPhase(Phase.Done) notRecipient{
         uint saleReturns = returnAmount[msg.sender];
-        require (saleReturns > 0);
-        returnAmount[msg.sender] = 0;
-        msg.sender.transfer(saleReturns);
+        if (saleReturns > 0){
+            returnAmount[msg.sender] = 0;
+            msg.sender.transfer(saleReturns);
+        }else{
+            emit ZeroBalance();
+        }
     }
     
     // end the sale and transfer balance to the recipient
     function finishSale() public checkPhase(Phase.Done) onlyRecipient{
         recipient.transfer(finalSellingPrice);
+        finalSellingPrice = finalSellingPrice/1000000000000000000;
         saleDetails = buyerDetails({
             buyer:finalCustomer,
             boughtPrice:finalSellingPrice
         });
+        emit SaleEnded(finalCustomer,finalSellingPrice);
     }
     
 }
@@ -123,15 +145,15 @@ Password
 0x4265260000000000000000000000000000000000000000000000000000000000
 
 bid 1:
-20000000000000000000
-0xabb7d85c7fe09d8882710e188e34e627259a9858bf3d30d6cd3db8f9ee4a81d5
+20
+0xf33027072471274d489ff841d4ea9e7e959a95c4d57d5f4f9c8541d474cb817a
 
 bid 2:
-30000000000000000000
-0x44b4d6f86f3a6ffc2ca7766341b64560d0b322aa2def31b44614a535c599daac
+30
+0xfaa88b88830698a2f37dd0fa4acbc258e126bc785f1407ba9824f408a905d784
 
 Deposit:
-50000000000000000000
+50
 
 
 */
