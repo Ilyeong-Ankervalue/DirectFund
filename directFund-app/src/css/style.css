@@ -17,7 +17,7 @@ html{
 }
 body {
     color: #999999;
-    font-size: 14px;
+    font-size: large;
     font-family: 'Roboto Mono', monospace;
     line-height: 1.80857;
 
@@ -54,7 +54,7 @@ table {
 .content
 {
     margin-top: 0px;
-    font-size: 14px;
+    font-size: large;
     font-family: 'Roboto Mono', monospace;
     line-height: 1.80857;
     height: 100%;
@@ -126,7 +126,41 @@ table {
 .fa-github {
     color: black;
 }
-
+.fa-angle-up:before {
+    content: "\f106";
+}
+.copyrights {
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    background-color: #1f1f1f;
+    box-sizing: border-box;
+    width: 100%;
+    text-align: left;
+    padding: 15px 0px;
+    overflow: hidden;
+}
+.dmtop.show{
+    bottom: 50px;
+}
+.dmtop {
+    background-color: #3C3D41;
+    z-index: 100;
+    width: 50px;
+    height: 50px;
+    line-height: 47px;
+    position: fixed;
+    bottom: -100px;
+    border-radius: 3px;
+    right: 50px;
+    text-align: center;
+    font-size: 28px;
+    color: #ffffff !important;
+    cursor: pointer;
+    -webkit-transition: all .7s ease-in-out;
+    -moz-transition: all .7s ease-in-out;
+    -o-transition: all .7s ease-in-out;
+    -ms-transition: all .7s ease-in-out;
+    transition: all .7s ease-in-out;
+}
 .input-group-addon {
     color: #fff;
     background-color: transparent;
@@ -222,6 +256,9 @@ table {
 .social a:hover
 {
     text-decoration: none;
+}
+#contact{
+    background-color: #e8e8e8;
 }
 #contact-info
 {
@@ -369,7 +406,8 @@ footer {
 .navbar-dark .navbar-nav .nav-link{
 	color: #ffffff;
 	letter-spacing: 1px;
-	font-size: 14px;
+    font-size: large;
+    margin-right: 25px;
 	position: relative;
 }
 .navbar-dark .navbar-nav .nav-link:hover{

@@ -14,7 +14,7 @@ contract DirectFund {
     
     enum Phase {Init, Proposal, Sale, Done}
 
-    address payable recipient;
+    address payable public recipient;
     address finalCustomer;
     
     uint finalSellingPrice = 0;
@@ -56,12 +56,12 @@ contract DirectFund {
     }
     
     // function to make a donation
-    function donate(uint donationAmt) public payable notRecipient{
-        donationAmt = donationAmt*1000000000000000000; // making all transactions in ether
-        uint donationBalance = 0;
-        recipient.transfer(donationAmt);
-        donationBalance = msg.value - donationAmt;
-        msg.sender.transfer(donationBalance);
+    function donate() public payable notRecipient{
+        // donationAmt = donationAmt*1000000000000000000; // making all transactions in ether
+        // uint donationBalance = 0;
+        recipient.transfer(msg.value);
+        // donationBalance = msg.value - donationAmt;
+        // msg.sender.transfer(donationBalance);
     }
     
     // function to change the phase

@@ -6,17 +6,19 @@ App = {
   // network_id: 5777,
   chairPerson: null,
   currentAccount: null,
-  biddingPhases: {
-    "AuctionInit": { 'id': 0, 'text': "Bidding Not Started" },
-    "BiddingStarted": { 'id': 1, 'text': "Bidding Started" },
-    "RevealStarted": { 'id': 2, 'text': "Reveal Started" },
-    "AuctionEnded": { 'id': 3, 'text': "Auction Ended" }
+  buyingPhases: {
+    "SaleInit": { 'id': 0, 'text': "Sale Not Started" },
+    "ProposalPhaseStarted": { 'id': 1, 'text': "Rate Proposal Started" },
+    "BuyPhaseStarted": { 'id': 2, 'text': "Buying Phase Started" },
+    "SaleEnded": { 'id': 3, 'text': "Sale Ended" },
+    "ZeroBalance": { 'id': 4, 'text': "Zero Balance"}
   },
-  auctionPhases: {
-    "0": "Bidding Not Started",
-    "1": "Bidding Started",
-    "2": "Reveal Started",
-    "3": "Auction Ended"
+  salePhases: {
+    "0": "SaleInit",
+    "1": "ProposalPhaseStarted",
+    "2": "BuyPhaseStarted",
+    "3": "SaleEnded",
+    "4": "ZeroBalance"
   },
 
   init: function () {
@@ -39,7 +41,7 @@ App = {
   },
 
   initContract: function () {
-    $.getJSON('BlindAuction.json', function (data) {
+    $.getJSON('DirectFund.json', function (data) {  
       // Get the necessary contract artifact file and instantiate it with truffle-contract
       var voteArtifact = data;
       App.contracts.vote = TruffleContract(voteArtifact);
@@ -48,6 +50,7 @@ App = {
       App.contracts.vote.setProvider(App.web3Provider);
       App.currentAccount = web3.eth.coinbase;
       jQuery('#current_account').text(App.currentAccount);
+      jQuery('#current_account1').text(App.currentAccount);
       App.getCurrentPhase();
       App.getChairperson();
       return App.bindEvents();
@@ -61,7 +64,7 @@ App = {
     $(document).on('click', '#submit-reveal', App.handleReveal);
     $(document).on('click', '#close-auction', App.handleClose);
     $(document).on('click', '#withdraw-bid', App.handleWithdraw);
-
+    $(document).on('click', '#donate-amt', App.handleDonation);
     //$(document).on('click', '#register', function(){ var ad = $('#enter_address').val(); App.handleRegister(ad); });
   },
 
@@ -78,10 +81,10 @@ App = {
 
   getCurrentPhase: function() {
     App.contracts.vote.deployed().then(function(instance) {
-      return instance.currentPhase();
+      return instance.state();
     }).then(function(result) {
       App.currentPhase = result;
-      var notificationText = App.auctionPhases[App.currentPhase];
+      var notificationText = App.salePhases[App.currentPhase];
       console.log(App.currentPhase);
       console.log(notificationText);
       $('#phase-notification-text').text(notificationText);
@@ -91,7 +94,8 @@ App = {
 
   getChairperson: function() {
     App.contracts.vote.deployed().then(function(instance) {
-      return instance.beneficiary();
+      console.log(instance.recipient);
+      return instance.recipient();
     }).then(function(result) {
       App.chairPerson = result;
       if(App.currentAccount == App.chairPerson) {
@@ -106,7 +110,7 @@ App = {
 
   handlePhase: function (event) {
     App.contracts.vote.deployed().then(function (instance) {
-      return instance.advancePhase();
+      return instance.nextPhase();
     })
       .then(function (result) {
         console.log(result);
@@ -116,10 +120,10 @@ App = {
               App.showNotification(result.logs[0].event);
             }
             else {
-              App.showNotification("AuctionEnded");
+              App.showNotification("Sale Ended");
             }
             App.contracts.vote.deployed().then(function(latestInstance) {
-              return latestInstance.currentPhase();
+              return latestInstance.state();
             }).then(function(result) {
               console.log("This is also working, new phase updated")
               App.currentPhase = result;
@@ -154,14 +158,44 @@ App = {
         if (result) {
           console.log(result.receipt.status);
           if (parseInt(result.receipt.status) == 1)
-            toastr.info("Your Bid is Placed!", "", { "iconClass": 'toast-info notification0' });
+            toastr.info("Your Proposal has been made!", "", { "iconClass": 'toast-info notification0' });
           else
-            toastr["error"]("Error in Bidding. Bidding Reverted!");
+            toastr["error"]("Error in Proposal. Proposal Reverted!");
         } else {
-          toastr["error"]("Bidding Failed!");
+          toastr["error"]("Proposal Failed!");
         }
       }).catch(function (err) {
-        toastr["error"]("Bidding Failed!");
+        toastr["error"]("Proposal Failed!");
+      });
+    });
+  },
+
+  handleDonation:function (){
+    console.log("button clicked");
+    event.preventDefault();
+    // var donationValue = $("#donation-reveal").val();
+    var depositValue = $("#deposit-value").val();
+    // console.log(parseInt(donationValue));
+    console.log(parseInt(depositValue));
+    web3.eth.getAccounts(function (error, accounts) {
+      var account = accounts[0];
+
+      App.contracts.vote.deployed().then(function (instance) {
+        curInstance = instance;
+
+        return curInstance.donate({ value: web3.toWei(depositValue, "ether") });
+      }).then(function (result, err) {
+        if (result) {
+          console.log(result.receipt.status);
+          if (parseInt(result.receipt.status) == 1)
+            toastr.info("Donation Successful", "", { "iconClass": 'toast-info notification0' });
+          else
+            toastr["error"]("Error in Doantion. Doantion Reverted!");
+        } else {
+          toastr["error"]("Doantion Failed!");
+        }
+      }).catch(function (err) {
+        toastr["error"]("Donation Failed!");
       });
     });
   },
@@ -178,19 +212,19 @@ App = {
       App.contracts.vote.deployed().then(function (instance) {
         bidInstance = instance;
 
-        return bidInstance.reveal(parseInt(bidRevealValue), bidRevealSecret);
+        return bidInstance.buy(parseInt(bidRevealValue), bidRevealSecret);
       }).then(function (result, err) {
         if (result) {
           console.log(result.receipt.status);
           if (parseInt(result.receipt.status) == 1)
-            toastr.info("Your Bid is Revealed!", "", { "iconClass": 'toast-info notification0' });
+            toastr.info("Your Proposal has been fixed! Wait for next phase", "", { "iconClass": 'toast-info notification0' });
           else
-            toastr["error"]("Error in Revealing. Bidding Reverted!");
+            toastr["error"]("Error in Buying. Buying Reverted!");
         } else {
-          toastr["error"]("Revealing Failed!");
+          toastr["error"]("Buying Failed!");
         }
       }).catch(function (err) {
-        toastr["error"]("Revealing Failed!");
+        toastr["error"]("Buying Failed!");
       });
     });
   },
@@ -201,12 +235,12 @@ App = {
     var bidInstance;
     App.contracts.vote.deployed().then(function (instance) {
       bidInstance = instance;
-      return bidInstance.auctionEnd();
+      return bidInstance.finishSale();
     }).then(function (res) {
       console.log(res);
       var winner = res.logs[0].args.winner;
       var highestBid = res.logs[0].args.highestBid.toNumber();
-      toastr.info("Highest bid is " + highestBid + "<br>" + "Winner is " + winner, "", { "iconClass": 'toast-info notification3' });
+      toastr.info("Final Selling Price is " + highestBid + "<br>" + "Final Buyer is " + winner, "", { "iconClass": 'toast-info notification3' });
     }).catch(function (err) {
       console.log(err.message);
       toastr["error"]("Error!");
@@ -218,38 +252,38 @@ App = {
       console.log("Inside handleWithdraw")
       App.contracts.vote.deployed().then(function(instance) {
         console.log("Trying to call withdraw with currentAccount: " + App.currentAccount);
-        return instance.withdraw({from: App.currentAccount });
+        return instance.getReturns({from: App.currentAccount });
       }).then(function(result, error) {
         if(result.receipt.status) {
-          toastr.info('Your bid has been withdrawn');
+          toastr.info('Your balance has been withdrawn');
         }  
       }).catch(function(error) {
         console.log(err.message);
-        toastr["error"]("Error in withdrawing the bid");
+        toastr["error"]("Error in withdrawing the balance");
       })
     } else {
-      toastr["error"]("Not in a valid phase to withdraw bid!");
+      toastr["error"]("Not in a valid phase to withdraw balance!");
     }
   },
 
-  handleClose: function() {
-    if(App.currentPhase == 3) {
-      console.log("this worked");
-      App.contracts.vote.deployed().then(function(instance) {
-        return instance.closeAuction()
-      }).then(function(result) {
-        if(result.receipt.status) {
-          toastr["error"]("Auction is closed!");
-        }
-      })
-    } else {
-      toastr["error"]("Not in a valid phase to close the auction!");
-    }
-  },
+  // handleClose: function() {
+  //   if(App.currentPhase == 3) {
+  //     console.log("this worked");
+  //     App.contracts.vote.deployed().then(function(instance) {
+  //       return instance.closeAuction()
+  //     }).then(function(result) {
+  //       if(result.receipt.status) {
+  //         toastr["error"]("Auction is closed!");
+  //       }
+  //     })
+  //   } else {
+  //     toastr["error"]("Not in a valid phase to close the auction!");
+  //   }
+  // },
 
   //Function to show the notification of auction phases
   showNotification: function (phase) {
-    var notificationText = App.biddingPhases[phase];
+    var notificationText = App.buyingPhases[phase];
     $('#phase-notification-text').text(notificationText.text);
     toastr.info(notificationText.text, "", { "iconClass": 'toast-info notification' + String(notificationText.id) });
   }
