@@ -14,11 +14,11 @@ App = {
     "ZeroBalance": { 'id': 4, 'text': "Zero Balance"}
   },
   salePhases: {
-    "0": "SaleInit",
-    "1": "ProposalPhaseStarted",
-    "2": "BuyPhaseStarted",
-    "3": "SaleEnded",
-    "4": "ZeroBalance"
+    "0": "Sale Not Started",
+    "1": "Proposal Phase Started",
+    "2": "Buy Phase Started",
+    "3": "Sale Ended",
+    "4": "Zero Balance"
   },
 
   init: function () {
@@ -62,10 +62,10 @@ App = {
     $(document).on('click', '#change-phase', App.handlePhase);
     $(document).on('click', '#generate-winner', App.handleWinner);
     $(document).on('click', '#submit-reveal', App.handleReveal);
-    $(document).on('click', '#close-auction', App.handleClose);
+    $(document).on('click', '#close-auction', App.handleSaleEnd);
     $(document).on('click', '#withdraw-bid', App.handleWithdraw);
     $(document).on('click', '#donate-amt', App.handleDonation);
-    //$(document).on('click', '#register', function(){ var ad = $('#enter_address').val(); App.handleRegister(ad); });
+    $(document).on('click', '#register', function(){ var ad = $('#enter_address').val(); App.handleRegister(ad); });
   },
 
   populateAddress: function () {
@@ -94,7 +94,6 @@ App = {
 
   getChairperson: function() {
     App.contracts.vote.deployed().then(function(instance) {
-      console.log(instance.recipient);
       return instance.recipient();
     }).then(function(result) {
       App.chairPerson = result;
@@ -113,14 +112,15 @@ App = {
       return instance.nextPhase();
     })
       .then(function (result) {
-        console.log(result);
+        //console.log(result);
         if (result) {
+          console.log(result);
           if (parseInt(result.receipt.status) == 1) {
             if (result.logs.length > 0) {
               App.showNotification(result.logs[0].event);
             }
             else {
-              App.showNotification("Sale Ended");
+              App.showNotification("SaleEnded");
             }
             App.contracts.vote.deployed().then(function(latestInstance) {
               return latestInstance.state();
@@ -131,14 +131,17 @@ App = {
             return;
           }
           else {
+            console.log(err);
             toastr["error"]("Error in changing to next Event");
           }
         }
         else {
+          console.log(err);
           toastr["error"]("Error in changing to next Event");
         }
       })
       .catch(function (err) {
+        console.log(err);
         toastr["error"]("Error in changing to next Event");
       });
   },
@@ -153,7 +156,7 @@ App = {
       App.contracts.vote.deployed().then(function (instance) {
         bidInstance = instance;
 
-        return bidInstance.bid(bidValue, { value: web3.toWei(msgValue, "ether") });
+        return bidInstance.propose(bidValue, { value: web3.toWei(msgValue, "ether") });
       }).then(function (result, err) {
         if (result) {
           console.log(result.receipt.status);
@@ -162,9 +165,11 @@ App = {
           else
             toastr["error"]("Error in Proposal. Proposal Reverted!");
         } else {
+          console.log(err);
           toastr["error"]("Proposal Failed!");
         }
       }).catch(function (err) {
+        console.log(err);
         toastr["error"]("Proposal Failed!");
       });
     });
@@ -230,7 +235,7 @@ App = {
   },
 
 
-  handleWinner: function () {
+  handleSaleEnd: function () {
     console.log("To get winner");
     var bidInstance;
     App.contracts.vote.deployed().then(function (instance) {
@@ -238,12 +243,12 @@ App = {
       return bidInstance.finishSale();
     }).then(function (res) {
       console.log(res);
-      var winner = res.logs[0].args.winner;
-      var highestBid = res.logs[0].args.highestBid.toNumber();
-      toastr.info("Final Selling Price is " + highestBid + "<br>" + "Final Buyer is " + winner, "", { "iconClass": 'toast-info notification3' });
+      // var winner = res.logs[0].args.finalBuyer;
+      // var highestBid = res.logs[0].args.finalCost.toNumber();
+      toastr.info("Sale Ended Successfully", "", { "iconClass": 'toast-info notification3' });
     }).catch(function (err) {
-      console.log(err.message);
-      toastr["error"]("Error!");
+      console.log(err);
+      toastr["error"]("Error! Sale not over!");
     })
   },
 
@@ -266,20 +271,20 @@ App = {
     }
   },
 
-  // handleClose: function() {
-  //   if(App.currentPhase == 3) {
-  //     console.log("this worked");
-  //     App.contracts.vote.deployed().then(function(instance) {
-  //       return instance.closeAuction()
-  //     }).then(function(result) {
-  //       if(result.receipt.status) {
-  //         toastr["error"]("Auction is closed!");
-  //       }
-  //     })
-  //   } else {
-  //     toastr["error"]("Not in a valid phase to close the auction!");
-  //   }
-  // },
+  handleWinner: function() {
+    if(App.currentPhase == 3) {
+      console.log("this worked");
+      App.contracts.vote.deployed().then(function(instance) {
+        return instance.getSaleDetails()
+      }).then(function(res) {
+      var winner = res.logs[0].args.finalBuyer;
+      var highestBid = res.logs[0].args.finalCost.toNumber();
+     toastr.info("Final Selling Price is " + highestBid + "<br>" + "Final Buyer is " + winner, "", { "iconClass": 'toast-info notification3' });
+      })
+    } else {
+      toastr["error"]("Not in a valid phase to view winner!");
+    }
+  },
 
   //Function to show the notification of auction phases
   showNotification: function (phase) {

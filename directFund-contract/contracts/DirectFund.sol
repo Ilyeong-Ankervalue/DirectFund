@@ -71,7 +71,7 @@ contract DirectFund {
         }else{
             state = Phase(uint(state)+1);
         }
-        
+        // state = Phase(uint(state)+1);
         if (state == Phase.Init) emit SaleInit();
         if (state == Phase.Proposal) emit ProposalPhaseStarted();
         if (state == Phase.Sale) emit BuyPhaseStarted();
@@ -98,6 +98,7 @@ contract DirectFund {
                 saleBalance -= proposedRate;
         }
         msg.sender.transfer(saleBalance);
+        checkProp.proposal = bytes32(0);
     }
     
     // encoding the proposed value
@@ -127,16 +128,19 @@ contract DirectFund {
     }
     
     // end the sale and transfer balance to the recipient
-    function finishSale() public checkPhase(Phase.Done) onlyRecipient{
+    function finishSale() public checkPhase(Phase.Done){
         recipient.transfer(finalSellingPrice);
         finalSellingPrice = finalSellingPrice/1000000000000000000;
         saleDetails = buyerDetails({
             buyer:finalCustomer,
             boughtPrice:finalSellingPrice
         });
-        emit SaleEnded(finalCustomer,finalSellingPrice);
+        // emit SaleEnded(finalCustomer,finalSellingPrice);
     }
     
+    function getSaleDetails() public {
+        emit SaleEnded(finalCustomer,finalSellingPrice);
+    }
 }
 
 /* Please use these for dry run or generate your own values
