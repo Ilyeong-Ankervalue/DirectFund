@@ -11,7 +11,7 @@ App = {
     "ProposalPhaseStarted": { 'id': 1, 'text': "Rate Proposal Started" },
     "BuyPhaseStarted": { 'id': 2, 'text': "Buying Phase Started" },
     "SaleEnded": { 'id': 3, 'text': "Sale Ended" },
-    "ZeroBalance": { 'id': 4, 'text': "Zero Balance"}
+    "ZeroBalance": { 'id': 4, 'text': "Zero Balance!"}
   },
   salePhases: {
     "0": "Sale Not Started",
@@ -103,6 +103,18 @@ App = {
         $(".img-chairperson").removeClass("col-lg-offset-2");
       } else {
         $(".other-user").css("display", "inline");
+        if(App.currentPhase == 0){
+          $(".begining-section").css("display", "inline");
+        }
+        if(App.currentPhase == 1){
+          $(".proposal-section").css("display", "inline");
+        }
+        else if (App.currentPhase == 2){
+          $(".buying-section").css("display", "inline");
+        }
+        else if (App.currentPhase == 3){
+          $(".ending-section").css("display", "inline");
+        }
       }
     })
   },
@@ -160,8 +172,11 @@ App = {
       }).then(function (result, err) {
         if (result) {
           console.log(result.receipt.status);
-          if (parseInt(result.receipt.status) == 1)
+          if (parseInt(result.receipt.status) == 1){
+            $("#bet-value").val('');
+            $("#message-value").val('');
             toastr.info("Your Proposal has been made!", "", { "iconClass": 'toast-info notification0' });
+          }
           else
             toastr["error"]("Error in Proposal. Proposal Reverted!");
         } else {
@@ -191,6 +206,7 @@ App = {
         return curInstance.donate({ value: web3.toWei(depositValue, "ether") });
       }).then(function (result, err) {
         if (result) {
+          $("#deposit-value").val('');
           console.log(result.receipt.status);
           if (parseInt(result.receipt.status) == 1)
             toastr.info("Donation Successful", "", { "iconClass": 'toast-info notification0' });
@@ -220,6 +236,8 @@ App = {
         return bidInstance.buy(parseInt(bidRevealValue), bidRevealSecret);
       }).then(function (result, err) {
         if (result) {
+          $("#bet-reveal").val('');
+          $("#password").val('');
           console.log(result.receipt.status);
           if (parseInt(result.receipt.status) == 1)
             toastr.info("Your Proposal has been fixed! Wait for next phase", "", { "iconClass": 'toast-info notification0' });
@@ -233,7 +251,6 @@ App = {
       });
     });
   },
-
 
   handleSaleEnd: function () {
     console.log("To get winner");
@@ -260,10 +277,15 @@ App = {
         return instance.getReturns({from: App.currentAccount });
       }).then(function(result, error) {
         if(result.receipt.status) {
-          toastr.info('Your balance has been withdrawn');
+          console.log(result);
+          if(result.logs.length>0){
+            App.showNotification(result.logs[0].event);
+          }else{
+            toastr.info('Your balance has been withdrawn');
+          }
         }  
       }).catch(function(error) {
-        console.log(err.message);
+        console.log(error);
         toastr["error"]("Error in withdrawing the balance");
       })
     } else {
@@ -279,7 +301,8 @@ App = {
       }).then(function(res) {
       var winner = res.logs[0].args.finalBuyer;
       var highestBid = res.logs[0].args.finalCost.toNumber();
-     toastr.info("Final Selling Price is " + highestBid + "<br>" + "Final Buyer is " + winner, "", { "iconClass": 'toast-info notification3' });
+      $(".sale-end-message").html("<b>Final Selling Price:<b> " + highestBid + "<br>" + "Final Buyer: <br>" + winner).css("font-family","Times New Roman")
+    //  toastr.info("Final Selling Price is " + highestBid + "<br>" + "Final Buyer is " + winner, "", { "iconClass": 'toast-info notification3' });
       })
     } else {
       toastr["error"]("Not in a valid phase to view winner!");

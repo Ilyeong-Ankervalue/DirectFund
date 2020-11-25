@@ -71,7 +71,6 @@ contract DirectFund {
         }else{
             state = Phase(uint(state)+1);
         }
-        // state = Phase(uint(state)+1);
         if (state == Phase.Init) emit SaleInit();
         if (state == Phase.Proposal) emit ProposalPhaseStarted();
         if (state == Phase.Sale) emit BuyPhaseStarted();
